@@ -1,0 +1,15 @@
+# MATLAB autosave and backup files
+*.asv
+*.m~
+*.mat
+*.fig
+*.slx
+*.slxc
+slprj/
+*.mex*
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

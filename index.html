@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinematic Analysis & Real-Time Simulation | Differential Drive Mobile Robot</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20width=%2232%22%20height=%2232%22><circle cx=%2216%22 cy=%2216%22 r=%2214%22 fill=%22%232563eb%22/><circle cx=%2216%22 cy=%228%22 r=%224%22 fill=%22%23ef4444%22/><rect x=%226%22 y=%2212%22 width=%224%22 height=%2210%22 fill=%22%23e2e8f0%22/><rect x=%2222%22 y=%2212%22 width=%224%22 height=%2210%22 fill=%22%23e2e8f0%22/></svg>">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card-bg: #181b24;
+      --card-border: #282d3d;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --cyan: #06b6d4;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --purple: #8b5cf6;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #13161f;
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .brand span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: block;
+    }
+    .header-links {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1f2432;
+      color: #cbd5e1;
+      text-decoration: none;
+      padding: 7px 13px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      border: 1px solid var(--card-border);
+      transition: all 0.2s;
+    }
+    .btn-link:hover {
+      background: #2a3144;
+      color: #fff;
+    }
+    .status-strip {
+      background: #0b0d13;
+      border-bottom: 1px solid var(--card-border);
+      padding: 8px 24px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.82rem;
+      color: var(--green);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .status-item {
+      display: flex;
+      gap: 6px;
+    }
+    .status-label {
+      color: var(--text-muted);
+    }
+    .main-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 16px;
+      padding: 16px 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    @media (max-width: 1024px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .arena-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .arena-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .arena-title {
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .arena-container {
+      position: relative;
+      width: 100%;
+      height: 480px;
+      background: #090a0f;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #1e2230;
+    }
+    canvas#arenaCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .arena-overlay-hints {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(15, 17, 23, 0.85);
+      backdrop-filter: blur(4px);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      background: #11141c;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .control-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    select, input[type="range"] {
+      width: 100%;
+    }
+    select {
+      background: #1e2230;
+      border: 1px solid #2d3348;
+      color: #fff;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-purple { background: var(--purple); color: #fff; }
+    .btn-purple:hover { background: #7c3aed; }
+    .btn-subtle { background: #262c3d; color: #e2e8f0; }
+    .btn-subtle:hover { background: #323a50; }
+
+    /* D-Pad Controls */
+    .dpad-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 38px);
+      grid-template-rows: repeat(2, 36px);
+      gap: 4px;
+    }
+    .dpad-btn {
+      background: #23293a;
+      border: 1px solid #333c54;
+      color: #f8fafc;
+      font-size: 0.95rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: all 0.1s;
+    }
+    .dpad-btn:active {
+      background: var(--accent);
+      transform: scale(0.95);
+    }
+
+    /* Telemetry Side */
+    .telemetry-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .chart-box {
+      background: #090a0f;
+      border: 1px solid #1e2230;
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .chart-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 0.75rem;
+    }
+    .legend-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    canvas.telemetry-canvas {
+      width: 100%;
+      height: 160px;
+      display: block;
+    }
+
+    /* Formula & Specs Card */
+    .specs-card {
+      background: #11141c;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .specs-card h3 {
+      font-size: 0.85rem;
+      color: #38bdf8;
+      margin-bottom: 6px;
+    }
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+    .specs-grid strong {
+      color: #e2e8f0;
+    }
+
+    /* Modal Report */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: #141722;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      max-width: 980px;
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-tabs {
+      display: flex;
+      gap: 8px;
+      background: #0d0f17;
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid #1e2230;
+      align-self: flex-start;
+    }
+    .modal-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .modal-tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover {
+      color: #fff;
+    }
+    .metrics-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .metric-card {
+      background: #0d0f17;
+      border: 1px solid #1e2333;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .metric-val {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #38bdf8;
+      font-family: ui-monospace, monospace;
+    }
+    .metric-desc {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .chart-container-box {
+      background: #090a0f;
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid #1e2230;
+      min-height: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas#analysisCanvas {
+      width: 100%;
+      height: 480px;
+      display: block;
+    }
+    .matlab-ref-img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      display: block;
+      margin: 0 auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🤖</div>
+      <div>
+        <h1>Differential Drive Wheeled Mobile Robot</h1>
+        <span>Kinematic Analysis & Real-Time Interactive Motion Simulation</span>
+      </div>
+    </div>
+    <div class="header-links">
+      <a class="btn-link" href="https://github.com/saimanikantanagabandi/differential-drive-robot-kinematics" target="_blank" rel="noopener">
+        📂 GitHub Repository
+      </a>
+      <a class="btn-link" href="https://matlab.mathworks.com/open/github/v1?repo=saimanikantanagabandi/differential-drive-robot-kinematics&file=diff_drive_moving_simulation.m" target="_blank" rel="noopener">
+        ⚡ Open in MATLAB Online
+      </a>
+    </div>
+  </header>
+
+  <!-- Live Status Strip -->
+  <div class="status-strip" id="statusStrip">
+    <div class="status-item"><span class="status-label">Time:</span> <span id="valT">0.00 s</span></div>
+    <div class="status-item"><span class="status-label">Pose (x, y, θ):</span> <span id="valPose">[0.00 m, 0.00 m, 0.0°]</span></div>
+    <div class="status-item"><span class="status-label">Velocity (v, ω):</span> <span id="valVel">0.25 m/s, 0.00 rad/s</span></div>
+    <div class="status-item"><span class="status-label">Wheels (ωR, ωL):</span> <span id="valWheels">5.0 rad/s, 5.0 rad/s</span></div>
+    <div class="status-item"><span class="status-label">Mode:</span> <span id="valMode" style="color:#38bdf8">Manual</span></div>
+  </div>
+
+  <!-- Main Body Layout -->
+  <main class="main-layout">
+    
+    <!-- Left Column: Arena & Controls -->
+    <div class="arena-card">
+      <div class="arena-header">
+        <div class="arena-title">
+          <span>🎯 Simulation Arena (2D Dynamic Plane)</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btnPlayPause">⏸ Pause</button>
+          <button class="btn btn-danger" id="btnReset">🔄 Reset</button>
+          <button class="btn btn-purple" id="btnAnalysis">📊 View Full Analysis</button>
+        </div>
+      </div>
+
+      <!-- Canvas for Arena -->
+      <div class="arena-container">
+        <canvas id="arenaCanvas"></canvas>
+        <div class="arena-overlay-hints">
+          ⌨️ Drive with <strong>W / S / A / D</strong> or Arrow Keys • Spacebar to Emergency Stop
+        </div>
+      </div>
+
+      <!-- Controls Row -->
+      <div class="controls-grid">
+        <div class="control-group">
+          <label class="control-label" for="modeSelect">Trajectory Mode</label>
+          <select id="modeSelect">
+            <option value="Manual">Manual Keyboard / Buttons</option>
+            <option value="Figure-8 Path">Figure-8 Path</option>
+            <option value="Circular Orbit">Circular Orbit</option>
+            <option value="Waypoint Tracking">Waypoint Tracking</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Linear Speed (v)</span>
+            <span id="labelSpeed">0.25 m/s</span>
+          </div>
+          <input type="range" id="sliderV" min="-0.5" max="0.8" step="0.05" value="0.25">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Steering Rate (ω)</span>
+            <span id="labelSteer">0.00 rad/s</span>
+          </div>
+          <input type="range" id="sliderW" min="-1.5" max="1.5" step="0.05" value="0.00">
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">D-Pad Steering</label>
+          <div class="dpad-container">
+            <div class="dpad">
+              <div></div>
+              <button class="dpad-btn" id="btnFwd" title="Forward (W)">▲</button>
+              <div></div>
+              <button class="dpad-btn" id="btnLeft" title="Turn Left (A)">◄</button>
+              <button class="dpad-btn" id="btnRev" title="Reverse (S)">▼</button>
+              <button class="dpad-btn" id="btnRight" title="Turn Right (D)">►</button>
+            </div>
+            <button class="btn btn-danger" id="btnStop" style="height: 76px; flex: 1;">■ STOP</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Kinematic Telemetry Charts & Spec -->
+    <div class="telemetry-card">
+      <div class="chart-box">
+        <div class="chart-header">
+          <span>Chassis Velocities</span>
+          <div class="chart-legend">
+            <span class="legend-tag"><span class="legend-dot" style="background:#38bdf8;"></span> v (m/s)</span>
+            <span class="legend-tag"><span class="legend-dot" style="background:#f59e0b;"></span> ω (rad/s)</span>
+          </div>
+        </div>
+        <canvas id="chartVelCanvas" class="telemetry-canvas"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-header">
+          <span>Actuator Speeds</span>
+          <div class="chart-legend">
+            <span class="legend-tag"><span class="legend-dot" style="background:#ef4444;"></span> ωR (Right)</span>
+            <span class="legend-tag"><span class="legend-dot" style="background:#10b981;"></span> ωL (Left)</span>
+          </div>
+        </div>
+        <canvas id="chartWheelCanvas" class="telemetry-canvas"></canvas>
+      </div>
+
+      <div class="specs-card">
+        <h3>📐 Kinematic Model Parameters</h3>
+        <div class="specs-grid">
+          <div>Wheel Radius (r): <strong>0.05 m (50 mm)</strong></div>
+          <div>Wheelbase (L): <strong>0.20 m (200 mm)</strong></div>
+          <div>Chassis Radius: <strong>0.12 m (120 mm)</strong></div>
+          <div>Integrator: <strong>Runge-Kutta 4th (RK4)</strong></div>
+          <div>Update Frequency: <strong>25 Hz (dt = 0.04s)</strong></div>
+          <div>Non-holonomic: <strong>Pure rolling, no-slip</strong></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Kinematic Analysis Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📊 Figure 3: Complete Kinematic Analysis Report</span>
+        </div>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+
+      <!-- Tab switcher -->
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" id="tabLiveBtn">📈 Live Run Subplots (Dynamic)</button>
+        <button class="modal-tab-btn" id="tabMatlabBtn">🖼️ MATLAB Online Benchmark Figure</button>
+      </div>
+
+      <div class="metrics-summary-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="metSimTime">0.0 s</div>
+          <div class="metric-desc">Total Simulation Time</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="metDistance">0.00 m</div>
+          <div class="metric-desc">Total Distance Traveled</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="metDisplacement">0.00 m</div>
+          <div class="metric-desc">Net Euclidean Displacement</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="metMaxV">0.00 m/s</div>
+          <div class="metric-desc">Max Linear Velocity (v)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="metMaxW">0.00 rad/s</div>
+          <div class="metric-desc">Max Angular Velocity (ω)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="metMaxRPM">0.0 RPM</div>
+          <div class="metric-desc">Peak Wheel Actuator Speed</div>
+        </div>
+      </div>
+
+      <!-- Live Canvas View -->
+      <div class="chart-container-box" id="liveChartView">
+        <canvas id="analysisCanvas"></canvas>
+      </div>
+
+      <!-- MATLAB Reference Figure View -->
+      <div class="chart-container-box" id="matlabRefView" style="display:none; flex-direction:column; gap:10px;">
+        <img class="matlab-ref-img" src="assets/kinematic_analysis_report.png" alt="MATLAB Online Figure 3 Complete Kinematic Analysis Report">
+        <div style="font-size:0.75rem; color:var(--text-muted); text-align:center;">
+          Generated from MATLAB Online (R2026/Simulink base) via <code>diff_drive_moving_simulation.m</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Robot Kinematic Parameters ---
+    const robot = {
+      r: 0.05,       // Wheel radius [m]
+      L: 0.20,       // Wheelbase [m]
+      body_r: 0.12   // Chassis radius [m]
+    };
+
+    // --- Simulation Configuration ---
+    const sim = {
+      dt: 0.04,
+      running: true,
+      mode: 'Manual',
+      manual_v: 0.25,
+      manual_w: 0.00
+    };
+
+    // --- State Vector: q = [x, y, theta] ---
+    let q = [0.0, 0.0, 0.0];
+    let t = 0.0;
+    let wp_idx = 0;
+
+    const waypoints = [
+      [ 0.0,  0.0],
+      [ 1.5,  0.5],
+      [ 2.5,  2.0],
+      [ 1.0,  3.0],
+      [-0.5,  2.0],
+      [ 0.0,  0.0]
+    ];
+
+    // Full Simulation Run History Log
+    const history = {
+      t: [0], x: [0], y: [0], theta: [0],
+      v: [sim.manual_v], w: [sim.manual_w],
+      wr: [(sim.manual_v + (robot.L / 2) * sim.manual_w) / robot.r],
+      wl: [(sim.manual_v - (robot.L / 2) * sim.manual_w) / robot.r]
+    };
+
+    // Rolling buffer for live strip charts
+    const BUF_LEN = 120;
+    const buf = {
+      t: Array(BUF_LEN).fill(0),
+      v: Array(BUF_LEN).fill(0),
+      w: Array(BUF_LEN).fill(0),
+      wr: Array(BUF_LEN).fill(0),
+      wl: Array(BUF_LEN).fill(0)
+    };
+
+    const trail = [{x: 0, y: 0}];
+
+    // Kinematic ODE: dq/dt = [v*cos(th); v*sin(th); w]
+    function kinematics(q_in, v_in, w_in) {
+      const th = q_in[2];
+      return [v_in * Math.cos(th), v_in * Math.sin(th), w_in];
+    }
+
+    // RK4 Numerical State Integrator
+    function rk4Step(q_in, v_cmd, w_cmd, dt) {
+      const k1 = kinematics(q_in, v_cmd, w_cmd);
+      const q2 = [q_in[0] + 0.5 * dt * k1[0], q_in[1] + 0.5 * dt * k1[1], q_in[2] + 0.5 * dt * k1[2]];
+      const k2 = kinematics(q2, v_cmd, w_cmd);
+      const q3 = [q_in[0] + 0.5 * dt * k2[0], q_in[1] + 0.5 * dt * k2[1], q_in[2] + 0.5 * dt * k2[2]];
+      const k3 = kinematics(q3, v_cmd, w_cmd);
+      const q4 = [q_in[0] + dt * k3[0], q_in[1] + dt * k3[1], q_in[2] + dt * k3[2]];
+      const k4 = kinematics(q4, v_cmd, w_cmd);
+
+      let x_new = q_in[0] + (dt / 6) * (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]);
+      let y_new = q_in[1] + (dt / 6) * (k1[1] + 2*k2[1] + 2*k3[1] + k4[1]);
+      let th_new = q_in[2] + (dt / 6) * (k1[2] + 2*k2[2] + 2*k3[2] + k4[2]);
+      th_new = Math.atan2(Math.sin(th_new), Math.cos(th_new));
+
+      return [x_new, y_new, th_new];
+    }
+
+    // Compute Commands based on selected mode
+    function computeCommands() {
+      let v_cmd = sim.manual_v;
+      let w_cmd = sim.manual_w;
+
+      switch(sim.mode) {
+        case 'Manual':
+          v_cmd = sim.manual_v;
+          w_cmd = sim.manual_w;
+          break;
+        case 'Figure-8 Path':
+          v_cmd = 0.35;
+          w_cmd = 0.45 * Math.sin(0.4 * t);
+          break;
+        case 'Circular Orbit':
+          v_cmd = 0.30;
+          w_cmd = 0.30;
+          break;
+        case 'Waypoint Tracking':
+          let target = waypoints[wp_idx];
+          let dx = target[0] - q[0];
+          let dy = target[1] - q[1];
+          let rho = Math.hypot(dx, dy);
+
+          if (rho < 0.15) {
+            wp_idx = (wp_idx + 1) % waypoints.length;
+            target = waypoints[wp_idx];
+            dx = target[0] - q[0];
+            dy = target[1] - q[1];
+            rho = Math.hypot(dx, dy);
+          }
+
+          let target_heading = Math.atan2(dy, dx);
+          let heading_err = Math.atan2(Math.sin(target_heading - q[2]), Math.cos(target_heading - q[2]));
+
+          v_cmd = Math.min(0.35, 0.4 * rho) * Math.max(0, Math.cos(heading_err));
+          w_cmd = 1.5 * heading_err;
+          break;
+      }
+      return { v_cmd, w_cmd };
+    }
+
+    // Main Update Step
+    function updatePhysics() {
+      if (!sim.running) return;
+
+      const { v_cmd, w_cmd } = computeCommands();
+
+      // Inverse Kinematics
+      const omega_R = (v_cmd + (robot.L / 2) * w_cmd) / robot.r;
+      const omega_L = (v_cmd - (robot.L / 2) * w_cmd) / robot.r;
+
+      // Integrate forward kinematics using RK4
+      q = rk4Step(q, v_cmd, w_cmd, sim.dt);
+      t += sim.dt;
+
+      // Log full history
+      history.t.push(t);
+      history.x.push(q[0]);
+      history.y.push(q[1]);
+      history.theta.push(q[2]);
+      history.v.push(v_cmd);
+      history.w.push(w_cmd);
+      history.wr.push(omega_R);
+      history.wl.push(omega_L);
+
+      // Rolling trail
+      trail.push({x: q[0], y: q[1]});
+      if (trail.length > 500) trail.shift();
+
+      // Telemetry buffer
+      buf.t.shift(); buf.t.push(t);
+      buf.v.shift(); buf.v.push(v_cmd);
+      buf.w.shift(); buf.w.push(w_cmd);
+      buf.wr.shift(); buf.wr.push(omega_R);
+      buf.wl.shift(); buf.wl.push(omega_L);
+
+      // Update UI Status Labels
+      document.getElementById('valT').textContent = t.toFixed(2) + ' s';
+      document.getElementById('valPose').textContent = `[${q[0].toFixed(2)}m, ${q[1].toFixed(2)}m, ${(q[2]*180/Math.PI).toFixed(1)}°]`;
+      document.getElementById('valVel').textContent = `${v_cmd.toFixed(2)} m/s, ${w_cmd.toFixed(2)} rad/s`;
+      document.getElementById('valWheels').textContent = `${omega_R.toFixed(1)} rad/s, ${omega_L.toFixed(1)} rad/s`;
+    }
+
+    // Canvas Rendering Setup
+    const arenaCanvas = document.getElementById('arenaCanvas');
+    const arenaCtx = arenaCanvas.getContext('2d');
+    const chartVelCanvas = document.getElementById('chartVelCanvas');
+    const chartWheelCanvas = document.getElementById('chartWheelCanvas');
+
+    function resizeCanvases() {
+      const rectA = arenaCanvas.parentElement.getBoundingClientRect();
+      if (rectA.width > 0) {
+        arenaCanvas.width = rectA.width * window.devicePixelRatio;
+        arenaCanvas.height = rectA.height * window.devicePixelRatio;
+      }
+
+      const rectV = chartVelCanvas.parentElement.getBoundingClientRect();
+      if (rectV.width > 0) {
+        chartVelCanvas.width = rectV.width * window.devicePixelRatio;
+        chartVelCanvas.height = 160 * window.devicePixelRatio;
+      }
+
+      const rectW = chartWheelCanvas.parentElement.getBoundingClientRect();
+      if (rectW.width > 0) {
+        chartWheelCanvas.width = rectW.width * window.devicePixelRatio;
+        chartWheelCanvas.height = 160 * window.devicePixelRatio;
+      }
+    }
+    window.addEventListener('resize', () => {
+      resizeCanvases();
+      if (modalBackdrop.style.display === 'flex' && liveChartView.style.display !== 'none') {
+        renderAnalysisCharts();
+      }
+    });
+    resizeCanvases();
+
+    // Render 2D Simulation Arena
+    function renderArena() {
+      const w = arenaCanvas.width;
+      const h = arenaCanvas.height;
+      if (w === 0 || h === 0) return;
+      const ctx = arenaCtx;
+
+      ctx.save();
+      ctx.clearRect(0, 0, w, h);
+
+      // Camera centering & zoom
+      const scale = 110 * (window.devicePixelRatio || 1);
+      const camX = q[0];
+      const camY = q[1];
+
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(1, -1); // Invert Y so up is positive
+      ctx.scale(scale, scale);
+      ctx.translate(-camX, -camY);
+
+      // Grid lines
+      ctx.lineWidth = 1 / scale;
+      ctx.strokeStyle = '#1a1f2e';
+      const gridMinX = Math.floor(camX - 5);
+      const gridMaxX = Math.ceil(camX + 5);
+      const gridMinY = Math.floor(camY - 5);
+      const gridMaxY = Math.ceil(camY + 5);
+
+      ctx.beginPath();
+      for (let x = gridMinX; x <= gridMaxX; x += 0.5) {
+        ctx.moveTo(x, gridMinY); ctx.lineTo(x, gridMaxY);
+      }
+      for (let y = gridMinY; y <= gridMaxY; y += 0.5) {
+        ctx.moveTo(gridMinX, y); ctx.lineTo(gridMaxX, y);
+      }
+      ctx.stroke();
+
+      // Axes (X and Y = 0)
+      ctx.lineWidth = 1.5 / scale;
+      ctx.strokeStyle = '#2e3852';
+      ctx.beginPath();
+      ctx.moveTo(-100, 0); ctx.lineTo(100, 0);
+      ctx.moveTo(0, -100); ctx.lineTo(0, 100);
+      ctx.stroke();
+
+      // Reference Path
+      if (sim.mode === 'Waypoint Tracking') {
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+        ctx.lineWidth = 2 / scale;
+        ctx.setLineDash([0.05, 0.05]);
+        ctx.beginPath();
+        waypoints.forEach((pt, i) => {
+          if (i === 0) ctx.moveTo(pt[0], pt[1]);
+          else ctx.lineTo(pt[0], pt[1]);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Waypoint markers
+        waypoints.forEach((pt, i) => {
+          ctx.fillStyle = (i === wp_idx) ? '#10b981' : '#f59e0b';
+          ctx.beginPath();
+          ctx.arc(pt[0], pt[1], (i === wp_idx ? 0.07 : 0.045), 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else if (sim.mode === 'Circular Orbit') {
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
+        ctx.lineWidth = 2 / scale;
+        ctx.setLineDash([0.05, 0.05]);
+        ctx.beginPath();
+        ctx.arc(0, 1.0, 1.0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Trajectory Trail
+      if (trail.length > 1) {
+        ctx.lineWidth = 3 / scale;
+        ctx.strokeStyle = '#06b6d4';
+        ctx.beginPath();
+        ctx.moveTo(trail[0].x, trail[0].y);
+        for (let i = 1; i < trail.length; i++) {
+          ctx.lineTo(trail[i].x, trail[i].y);
+        }
+        ctx.stroke();
+      }
+
+      // Robot Chassis
+      ctx.save();
+      ctx.translate(q[0], q[1]);
+      ctx.rotate(q[2]);
+
+      // Wheels
+      const wr_w = robot.r * 0.9;
+      const wr_t = 0.035;
+      ctx.fillStyle = '#cbd5e1';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1 / scale;
+
+      // Right Wheel
+      ctx.fillRect(-wr_w/2, -robot.L/2 - wr_t/2, wr_w, wr_t);
+      ctx.strokeRect(-wr_w/2, -robot.L/2 - wr_t/2, wr_w, wr_t);
+
+      // Left Wheel
+      ctx.fillRect(-wr_w/2, robot.L/2 - wr_t/2, wr_w, wr_t);
+      ctx.strokeRect(-wr_w/2, robot.L/2 - wr_t/2, wr_w, wr_t);
+
+      // Chassis Body (Circle)
+      ctx.beginPath();
+      ctx.arc(0, 0, robot.body_r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(37, 99, 235, 0.85)';
+      ctx.fill();
+      ctx.strokeStyle = '#93c5fd';
+      ctx.lineWidth = 2 / scale;
+      ctx.stroke();
+
+      // Heading Vector (Red Arrow)
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3 / scale;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(robot.body_r * 1.35, 0);
+      ctx.stroke();
+
+      // Front Caster
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(robot.body_r * 0.75, 0, 0.02, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+      ctx.restore();
+    }
+
+    // Generic Rolling Strip Chart Drawer
+    function drawStripChart(canvas, series1, series2, col1, col2, yMin, yMax) {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      if (w === 0 || h === 0) return;
+      ctx.clearRect(0, 0, w, h);
+
+      // Background grid
+      ctx.strokeStyle = '#1e2333';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let y = 0; y <= h; y += h / 4) {
+        ctx.moveTo(0, y); ctx.lineTo(w, y);
+      }
+      ctx.stroke();
+
+      const toY = val => h - ((val - yMin) / (yMax - yMin)) * h;
+
+      // Zero axis
+      const zeroY = toY(0);
+      ctx.strokeStyle = '#333c52';
+      ctx.beginPath();
+      ctx.moveTo(0, zeroY); ctx.lineTo(w, zeroY);
+      ctx.stroke();
+
+      function plot(data, color) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2 * (window.devicePixelRatio || 1);
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const y = toY(data[i]);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      plot(series1, col1);
+      plot(series2, col2);
+    }
+
+    // Animation Loop
+    function loop() {
+      updatePhysics();
+      renderArena();
+      drawStripChart(chartVelCanvas, buf.v, buf.w, '#38bdf8', '#f59e0b', -1.5, 1.5);
+      drawStripChart(chartWheelCanvas, buf.wr, buf.wl, '#ef4444', '#10b981', -6.0, 10.0);
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // UI Event Handlers
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    btnPlayPause.addEventListener('click', () => {
+      sim.running = !sim.running;
+      btnPlayPause.textContent = sim.running ? '⏸ Pause' : '▶ Play';
+      btnPlayPause.className = sim.running ? 'btn btn-primary' : 'btn btn-purple';
+    });
+
+    const btnReset = document.getElementById('btnReset');
+    function resetSim() {
+      q = [0.0, 0.0, 0.0];
+      t = 0.0;
+      wp_idx = 0;
+      trail.length = 0;
+      trail.push({x: 0, y: 0});
+      sim.manual_v = 0.25;
+      sim.manual_w = 0.00;
+      document.getElementById('sliderV').value = sim.manual_v;
+      document.getElementById('sliderW').value = sim.manual_w;
+      document.getElementById('labelSpeed').textContent = sim.manual_v.toFixed(2) + ' m/s';
+      document.getElementById('labelSteer').textContent = sim.manual_w.toFixed(2) + ' rad/s';
+
+      history.t = [0]; history.x = [0]; history.y = [0]; history.theta = [0];
+      history.v = [sim.manual_v]; history.w = [sim.manual_w];
+      history.wr = [(sim.manual_v + (robot.L / 2) * sim.manual_w) / robot.r];
+      history.wl = [(sim.manual_v - (robot.L / 2) * sim.manual_w) / robot.r];
+    }
+    btnReset.addEventListener('click', resetSim);
+
+    const modeSelect = document.getElementById('modeSelect');
+    modeSelect.addEventListener('change', (e) => {
+      sim.mode = e.target.value;
+      document.getElementById('valMode').textContent = sim.mode;
+      resetSim();
+    });
+
+    const sliderV = document.getElementById('sliderV');
+    sliderV.addEventListener('input', (e) => {
+      sim.manual_v = parseFloat(e.target.value);
+      document.getElementById('labelSpeed').textContent = sim.manual_v.toFixed(2) + ' m/s';
+    });
+
+    const sliderW = document.getElementById('sliderW');
+    sliderW.addEventListener('input', (e) => {
+      sim.manual_w = parseFloat(e.target.value);
+      document.getElementById('labelSteer').textContent = sim.manual_w.toFixed(2) + ' rad/s';
+    });
+
+    function setSpeedW(dv, dw) {
+      sim.manual_v = Math.max(-0.5, Math.min(0.8, sim.manual_v + dv));
+      sim.manual_w = Math.max(-1.5, Math.min(1.5, sim.manual_w + dw));
+      sliderV.value = sim.manual_v;
+      sliderW.value = sim.manual_w;
+      document.getElementById('labelSpeed').textContent = sim.manual_v.toFixed(2) + ' m/s';
+      document.getElementById('labelSteer').textContent = sim.manual_w.toFixed(2) + ' rad/s';
+    }
+
+    document.getElementById('btnFwd').addEventListener('click', () => setSpeedW(0.08, 0));
+    document.getElementById('btnRev').addEventListener('click', () => setSpeedW(-0.08, 0));
+    document.getElementById('btnLeft').addEventListener('click', () => setSpeedW(0, 0.20));
+    document.getElementById('btnRight').addEventListener('click', () => setSpeedW(0, -0.20));
+    document.getElementById('btnStop').addEventListener('click', () => {
+      sim.manual_v = 0;
+      sim.manual_w = 0;
+      sliderV.value = 0;
+      sliderW.value = 0;
+      document.getElementById('labelSpeed').textContent = '0.00 m/s';
+      document.getElementById('labelSteer').textContent = '0.00 rad/s';
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
+      if (sim.mode !== 'Manual') return;
+      switch (e.key.toLowerCase()) {
+        case 'w':
+        case 'arrowup':
+          setSpeedW(0.05, 0);
+          e.preventDefault();
+          break;
+        case 's':
+        case 'arrowdown':
+          setSpeedW(-0.05, 0);
+          e.preventDefault();
+          break;
+        case 'a':
+        case 'arrowleft':
+          setSpeedW(0, 0.15);
+          e.preventDefault();
+          break;
+        case 'd':
+        case 'arrowright':
+          setSpeedW(0, -0.15);
+          e.preventDefault();
+          break;
+        case ' ':
+          document.getElementById('btnStop').click();
+          e.preventDefault();
+          break;
+      }
+    });
+
+    // Modal Elements & Tab Switching
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalClose = document.getElementById('modalClose');
+    const btnAnalysis = document.getElementById('btnAnalysis');
+    const tabLiveBtn = document.getElementById('tabLiveBtn');
+    const tabMatlabBtn = document.getElementById('tabMatlabBtn');
+    const liveChartView = document.getElementById('liveChartView');
+    const matlabRefView = document.getElementById('matlabRefView');
+
+    tabLiveBtn.addEventListener('click', () => {
+      tabLiveBtn.classList.add('active');
+      tabMatlabBtn.classList.remove('active');
+      liveChartView.style.display = 'flex';
+      matlabRefView.style.display = 'none';
+      renderAnalysisCharts();
+    });
+
+    tabMatlabBtn.addEventListener('click', () => {
+      tabMatlabBtn.classList.add('active');
+      tabLiveBtn.classList.remove('active');
+      liveChartView.style.display = 'none';
+      matlabRefView.style.display = 'flex';
+    });
+
+    btnAnalysis.addEventListener('click', () => {
+      if (history.t.length < 5) {
+        alert('Please allow the simulation to run for a few moments first.');
+        return;
+      }
+
+      // Compute summary metrics
+      const totalTime = history.t[history.t.length - 1];
+      let pathLen = 0;
+      for (let i = 1; i < history.x.length; i++) {
+        pathLen += Math.hypot(history.x[i] - history.x[i-1], history.y[i] - history.y[i-1]);
+      }
+      const netDisp = Math.hypot(history.x[history.x.length - 1] - history.x[0], history.y[history.y.length - 1] - history.y[0]);
+      const maxV = Math.max(...history.v);
+      const maxW = Math.max(...history.w.map(Math.abs));
+      const maxWr = Math.max(...history.wr.map(Math.abs));
+      const maxWl = Math.max(...history.wl.map(Math.abs));
+      const peakWheel = Math.max(maxWr, maxWl);
+      const peakRPM = (peakWheel * 60) / (2 * Math.PI);
+
+      document.getElementById('metSimTime').textContent = totalTime.toFixed(2) + ' s';
+      document.getElementById('metDistance').textContent = pathLen.toFixed(2) + ' m';
+      document.getElementById('metDisplacement').textContent = netDisp.toFixed(2) + ' m';
+      document.getElementById('metMaxV').textContent = maxV.toFixed(2) + ' m/s';
+      document.getElementById('metMaxW').textContent = maxW.toFixed(2) + ' rad/s';
+      document.getElementById('metMaxRPM').textContent = peakRPM.toFixed(1) + ' RPM';
+
+      // Show modal FIRST
+      modalBackdrop.style.display = 'flex';
+
+      // Render charts immediately and safely after DOM paint
+      renderAnalysisCharts();
+      requestAnimationFrame(() => {
+        renderAnalysisCharts();
+      });
+      setTimeout(() => {
+        renderAnalysisCharts();
+      }, 40);
+    });
+
+    modalClose.addEventListener('click', () => {
+      modalBackdrop.style.display = 'none';
+    });
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) modalBackdrop.style.display = 'none';
+    });
+
+    // High-Fidelity 4-Subplot MATLAB Diagnostic Chart Renderer
+    function renderAnalysisCharts() {
+      const anCanvas = document.getElementById('analysisCanvas');
+      if (!anCanvas) return;
+      const container = anCanvas.parentElement;
+      if (!container) return;
+
+      // Ensure proper width even when freshly unhidden
+      let targetW = container.clientWidth || container.getBoundingClientRect().width;
+      if (!targetW || targetW < 100) {
+        targetW = Math.min(880, window.innerWidth - 60);
+      }
+      const targetH = 480;
+      const dpr = window.devicePixelRatio || 1;
+
+      anCanvas.style.width = targetW + 'px';
+      anCanvas.style.height = targetH + 'px';
+      anCanvas.width = targetW * dpr;
+      anCanvas.height = targetH * dpr;
+
+      const ctx = anCanvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, targetW, targetH);
+
+      // Subplot grid layout
+      const padL = 52, padR = 48, padT = 24, padB = 40;
+      const gapX = 64, gapY = 56;
+      const pw = (targetW - padL - padR - gapX) / 2;
+      const ph = (targetH - padT - padB - gapY) / 2;
+
+      // Subplot positions
+      const p1 = { x: padL, y: padT, w: pw, h: ph };
+      const p2 = { x: padL + pw + gapX, y: padT, w: pw, h: ph };
+      const p3 = { x: padL, y: padT + ph + gapY, w: pw, h: ph };
+      const p4 = { x: padL + pw + gapX, y: padT + ph + gapY, w: pw, h: ph };
+
+      // Helper: Draw background frame, ticks, and grid
+      function drawFrame(box, title, xLabel, yLabel, xTicks, yTicks, rightYLabel, rightYTicks) {
+        // Dark background
+        ctx.fillStyle = '#06070a';
+        ctx.fillRect(box.x, box.y, box.w, box.h);
+        ctx.strokeStyle = '#252938';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+        // Title
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(title, box.x + box.w / 2, box.y - 7);
+
+        // X Axis Label
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(xLabel, box.x + box.w / 2, box.y + box.h + 26);
+
+        // Left Y Axis Label
+        if (yLabel) {
+          ctx.save();
+          ctx.translate(box.x - 34, box.y + box.h / 2);
+          ctx.rotate(-Math.PI / 2);
+          ctx.textAlign = 'center';
+          ctx.fillText(yLabel, 0, 0);
+          ctx.restore();
+        }
+
+        // Right Y Axis Label
+        if (rightYLabel) {
+          ctx.save();
+          ctx.translate(box.x + box.w + 36, box.y + box.h / 2);
+          ctx.rotate(Math.PI / 2);
+          ctx.fillStyle = '#f59e0b';
+          ctx.textAlign = 'center';
+          ctx.fillText(rightYLabel, 0, 0);
+          ctx.restore();
+        }
+
+        // Vertical Grid & X Ticks
+        if (xTicks && xTicks.length) {
+          ctx.strokeStyle = '#181c28';
+          ctx.fillStyle = '#64748b';
+          ctx.font = '9px monospace';
+          ctx.textAlign = 'center';
+          xTicks.forEach(tick => {
+            const px = box.x + tick.norm * box.w;
+            ctx.beginPath();
+            ctx.moveTo(px, box.y); ctx.lineTo(px, box.y + box.h);
+            ctx.stroke();
+            ctx.fillText(tick.text, px, box.y + box.h + 12);
+          });
+        }
+
+        // Horizontal Grid & Y Ticks
+        if (yTicks && yTicks.length) {
+          ctx.strokeStyle = '#181c28';
+          ctx.fillStyle = '#64748b';
+          ctx.font = '9px monospace';
+          ctx.textAlign = 'right';
+          yTicks.forEach(tick => {
+            const py = box.y + box.h - tick.norm * box.h;
+            ctx.beginPath();
+            ctx.moveTo(box.x, py); ctx.lineTo(box.x + box.w, py);
+            ctx.stroke();
+            ctx.fillText(tick.text, box.x - 6, py + 3);
+          });
+        }
+
+        // Right Y Ticks (if dual-axis)
+        if (rightYTicks && rightYTicks.length) {
+          ctx.fillStyle = '#f59e0b';
+          ctx.font = '9px monospace';
+          ctx.textAlign = 'left';
+          rightYTicks.forEach(tick => {
+            const py = box.y + box.h - tick.norm * box.h;
+            ctx.fillText(tick.text, box.x + box.w + 6, py + 3);
+          });
+        }
+      }
+
+      // Helper: Generate clean nice ticks
+      function makeTicks(min, max, count = 5) {
+        if (min === max) { min -= 1; max += 1; }
+        const ticks = [];
+        for (let i = 0; i <= count; i++) {
+          const val = min + (i / count) * (max - min);
+          ticks.push({
+            norm: i / count,
+            val: val,
+            text: val.toFixed(Math.abs(max - min) < 5 ? 1 : 0)
+          });
+        }
+        return ticks;
+      }
+
+      // -------------------------------------------------------------
+      // SUBPLOT 1: Full Trajectory (X-Y)
+      // -------------------------------------------------------------
+      const minX = Math.min(...history.x);
+      const maxX = Math.max(...history.x);
+      const minY = Math.min(...history.y);
+      const maxY = Math.max(...history.y);
+      const spanX = Math.max(0.5, maxX - minX);
+      const spanY = Math.max(0.5, maxY - minY);
+      // Keep aspect ratio centered
+      const spanMax = Math.max(spanX, spanY) * 1.15;
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+      const x0 = midX - spanMax / 2;
+      const x1 = midX + spanMax / 2;
+      const y0 = midY - spanMax / 2;
+      const y1 = midY + spanMax / 2;
+
+      drawFrame(p1, 'Full Trajectory (X-Y)', 'X Position [m]', 'Y Position [m]', makeTicks(x0, x1, 4), makeTicks(y0, y1, 4));
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(p1.x, p1.y, p1.w, p1.h);
+      ctx.clip();
+
+      // Trajectory Line
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      for (let i = 0; i < history.x.length; i++) {
+        const px = p1.x + ((history.x[i] - x0) / spanMax) * p1.w;
+        const py = p1.y + p1.h - ((history.y[i] - y0) / spanMax) * p1.h;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Start Marker (Green circle)
+      const startPx = p1.x + ((history.x[0] - x0) / spanMax) * p1.w;
+      const startPy = p1.y + p1.h - ((history.y[0] - y0) / spanMax) * p1.h;
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.arc(startPx, startPy, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // End Marker (Red square)
+      const lastIdx = history.x.length - 1;
+      const endPx = p1.x + ((history.x[lastIdx] - x0) / spanMax) * p1.w;
+      const endPy = p1.y + p1.h - ((history.y[lastIdx] - y0) / spanMax) * p1.h;
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(endPx - 5, endPy - 5, 10, 10);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(endPx - 5, endPy - 5, 10, 10);
+
+      ctx.restore();
+
+      // Subplot 1 Legend
+      ctx.fillStyle = 'rgba(10, 12, 18, 0.85)';
+      ctx.fillRect(p1.x + p1.w - 96, p1.y + 6, 90, 48);
+      ctx.strokeStyle = '#282d3d';
+      ctx.strokeRect(p1.x + p1.w - 96, p1.y + 6, 90, 48);
+      ctx.font = '8.5px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+
+      ctx.fillStyle = '#38bdf8'; ctx.fillRect(p1.x + p1.w - 90, p1.y + 16, 12, 2);
+      ctx.fillStyle = '#e2e8f0'; ctx.fillText('Actual Path', p1.x + p1.w - 72, p1.y + 19);
+
+      ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(p1.x + p1.w - 84, p1.y + 29, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e2e8f0'; ctx.fillText('Start', p1.x + p1.w - 72, p1.y + 32);
+
+      ctx.fillStyle = '#ef4444'; ctx.fillRect(p1.x + p1.w - 87, p1.y + 38, 7, 7);
+      ctx.fillStyle = '#e2e8f0'; ctx.fillText('Current End', p1.x + p1.w - 72, p1.y + 44);
+
+      // -------------------------------------------------------------
+      // SUBPLOT 2: States x(t), y(t), theta(t)
+      // -------------------------------------------------------------
+      const tMin = 0;
+      const tMax = Math.max(1, history.t[history.t.length - 1]);
+      const sMin = Math.min(...history.x, ...history.y, ...history.theta, -1.0) - 0.5;
+      const sMax = Math.max(...history.x, ...history.y, ...history.theta, 1.0) + 0.5;
+
+      drawFrame(p2, 'States: x(t), y(t), θ(t)', 'Time [s]', 'State Value', makeTicks(tMin, tMax, 4), makeTicks(sMin, sMax, 4));
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(p2.x, p2.y, p2.w, p2.h);
+      ctx.clip();
+
+      function plotSeries(box, tArr, yArr, color, dashed = false) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.8;
+        if (dashed) ctx.setLineDash([4, 3]);
+        else ctx.setLineDash([]);
+        ctx.beginPath();
+        for (let i = 0; i < tArr.length; i++) {
+          const px = box.x + ((tArr[i] - tMin) / (tMax - tMin)) * box.w;
+          const py = box.y + box.h - ((yArr[i] - sMin) / (sMax - sMin)) * box.h;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      plotSeries(p2, history.t, history.x, '#ef4444');      // x: red
+      plotSeries(p2, history.t, history.y, '#22c55e');      // y: green
+      plotSeries(p2, history.t, history.theta, '#38bdf8', true); // theta: blue dashed
+      ctx.restore();
+
+      // Subplot 2 Legend
+      ctx.fillStyle = 'rgba(10, 12, 18, 0.85)';
+      ctx.fillRect(p2.x + p2.w - 82, p2.y + 6, 76, 48);
+      ctx.strokeStyle = '#282d3d';
+      ctx.strokeRect(p2.x + p2.w - 82, p2.y + 6, 76, 48);
+      ctx.font = '8.5px system-ui, sans-serif';
+
+      ctx.fillStyle = '#ef4444'; ctx.fillRect(p2.x + p2.w - 76, p2.y + 16, 12, 2);
+      ctx.fillStyle = '#e2e8f0'; ctx.fillText('x [m]', p2.x + p2.w - 58, p2.y + 19);
+
+      ctx.fillStyle = '#22c55e'; ctx.fillRect(p2.x + p2.w - 76, p2.y + 29, 12, 2);
+      ctx.fillStyle = '#e2e8f0'; ctx.fillText('y [m]', p2.x + p2.w - 58, p2.y + 32);
+
+      ctx.fillStyle = '#38bdf8'; ctx.fillRect(p2.x + p2.w - 76, p2.y + 42, 12, 2);
+      ctx.fillStyle = '#e2e8f0'; ctx.fillText('θ [rad]', p2.x + p2.w - 58, p2.y + 45);
+
+      // -------------------------------------------------------------
+      // SUBPLOT 3: Chassis Velocities vs Time (Dual Y-Axis)
+      // -------------------------------------------------------------
+      const vMin = -0.6, vMax = 1.0;
+      const wMin = -1.6, wMax = 1.6;
+
+      drawFrame(p3, 'Chassis Velocities vs Time', 'Time [s]', 'Linear Velocity v [m/s]', 
+                makeTicks(tMin, tMax, 4), makeTicks(vMin, vMax, 4), 
+                'Angular Velocity ω [rad/s]', makeTicks(wMin, wMax, 4));
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(p3.x, p3.y, p3.w, p3.h);
+      ctx.clip();
+
+      // Linear velocity v (Left Axis - Solid Blue)
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      for (let i = 0; i < history.t.length; i++) {
+        const px = p3.x + ((history.t[i] - tMin) / (tMax - tMin)) * p3.w;
+        const py = p3.y + p3.h - ((history.v[i] - vMin) / (vMax - vMin)) * p3.h;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Angular velocity w (Right Axis - Dashed Magenta)
+      ctx.strokeStyle = '#ec4899';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      for (let i = 0; i < history.t.length; i++) {
+        const px = p3.x + ((history.t[i] - tMin) / (tMax - tMin)) * p3.w;
+        const py = p3.y + p3.h - ((history.w[i] - wMin) / (wMax - wMin)) * p3.h;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // -------------------------------------------------------------
+      // SUBPLOT 4: Wheel Speeds: omega_R(t), omega_L(t)
+      // -------------------------------------------------------------
+      const wrMin = Math.min(...history.wr, ...history.wl, -2.0) - 1.0;
+      const wrMax = Math.max(...history.wr, ...history.wl, 8.0) + 1.0;
+
+      drawFrame(p4, 'Wheel Speeds: ω_R(t), ω_L(t)', 'Time [s]', 'Angular Velocity [rad/s]', 
+                makeTicks(tMin, tMax, 4), makeTicks(wrMin, wrMax, 4));
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(p4.x, p4.y, p4.w, p4.h);
+      ctx.clip();
+
+      // Right Wheel (Red Solid)
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      for (let i = 0; i < history.t.length; i++) {
+        const px = p4.x + ((history.t[i] - tMin) / (tMax - tMin)) * p4.w;
+        const py = p4.y + p4.h - ((history.wr[i] - wrMin) / (wrMax - wrMin)) * p4.h;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Left Wheel (Dashed White)
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      for (let i = 0; i < history.t.length; i++) {
+        const px = p4.x + ((history.t[i] - tMin) / (tMax - tMin)) * p4.w;
+        const py = p4.y + p4.h - ((history.wl[i] - wrMin) / (wrMax - wrMin)) * p4.h;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Subplot 4 Legend
+      ctx.fillStyle = 'rgba(10, 12, 18, 0.85)';
+      ctx.fillRect(p4.x + p4.w - 100, p4.y + 6, 94, 36);
+      ctx.strokeStyle = '#282d3d';
+      ctx.strokeRect(p4.x + p4.w - 100, p4.y + 6, 94, 36);
+      ctx.font = '8.5px system-ui, sans-serif';
+
+      ctx.fillStyle = '#ef4444'; ctx.fillRect(p4.x + p4.w - 94, p4.y + 16, 12, 2);
+      ctx.fillStyle = '#e2e8f0'; ctx.fillText('ω_R (Right)', p4.x + p4.w - 76, p4.y + 19);
+
+      ctx.fillStyle = '#f1f5f9'; ctx.fillRect(p4.x + p4.w - 94, p4.y + 27, 12, 2);
+      ctx.fillStyle = '#e2e8f0'; ctx.fillText('ω_L (Left)', p4.x + p4.w - 76, p4.y + 30);
+    }
+  </script>
+</body>
+</html>
